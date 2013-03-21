@@ -221,7 +221,7 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
   }
 
   protected void createDocument(Entity entity) {
-  	final SolrInputDocument document = new SolrInputDocument();
+  		final SolrInputDocument document = new SolrInputDocument();
         document.addField(URL, StringUtils.strip(entity.subject, "<>"));
         document.addField(NTRIPLE, cleanup(entity.getTriples(true)));
         document.addField(TYPE, Utils.toString(entity.type));
