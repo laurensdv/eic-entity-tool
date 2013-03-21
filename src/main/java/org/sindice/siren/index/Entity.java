@@ -47,6 +47,10 @@ public class Entity {
   String subject = ""; // The URI of the entity
   String context = ""; // The URL of the document where the entity is from
   
+  public Entity() {
+	  // do nothing
+  }
+  
   public Entity(Entity entity) {
 	  this.inTuples = entity.inTuples;
 	  this.outTuples = entity.outTuples;
