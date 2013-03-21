@@ -13,6 +13,11 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.lang.StringUtils;
@@ -66,7 +71,29 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
   /* SIREn index */
   protected final String         	indexURL;
   private final SolrServer 			server;
-
+  
+  /*
+   * Threading
+   */
+  protected int poolSize									= 24;
+  protected int timeOut										= 10;
+  protected BlockingQueue<Runnable> worksQueue = new ArrayBlockingQueue<Runnable>(2);
+  protected RejectedExecutionHandler executionHandler = new MyRejectedExecutionHandelerImpl();
+   
+  // Create the ThreadPoolExecutor
+  protected ThreadPoolExecutor executor = new ThreadPoolExecutor(this.poolSize, this.poolSize, this.timeOut, TimeUnit.SECONDS, worksQueue, executionHandler);
+  
+  protected long counter = 0;
+  
+  protected class MyRejectedExecutionHandelerImpl implements RejectedExecutionHandler
+  {
+      @Override
+      public void rejectedExecution(Runnable runnable,
+              ThreadPoolExecutor executor)
+      {
+          System.out.println(runnable.toString() + " : I've been rejected ! ");
+      }
+  }
 
   /**
    * Create a SIREn index at indexDir, taking the files at inputDir as input.
@@ -76,6 +103,8 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
    */
   public IndexingMMLab(final File inputDir, final String url)
 	throws SolrServerException, IOException {
+	this.executor.allowCoreThreadTimeOut(true);
+	  
     this.input = inputDir.listFiles(new FilenameFilter() {
       
       @Override
@@ -176,29 +205,96 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
    */
   public void indexIt()
   throws IOException, SolrServerException {
+	// Starting the monitor thread as a daemon
+	Thread monitor = new Thread(new MyMonitorThread(this.executor));
+	monitor.setDaemon(true);
+	monitor.start();
     Entity entity = null;
-    long counter = 0;
     
     while (hasNext()) { // for each entity
       entity = next();
-      
-      final SolrInputDocument document = new SolrInputDocument();
-      document.addField(URL, StringUtils.strip(entity.subject, "<>"));
-      document.addField(NTRIPLE, cleanup(entity.getTriples(true)));
-      document.addField(TYPE, Utils.toString(entity.type));
-      document.addField(LABEL, Utils.toString(entity.label));
-      document.addField(DESCRIPTION, Utils.toString(entity.description));
-      try {
-	add(document);
-	counter = commit(true, counter, entity.subject);
-      } catch (Exception e) {
-	logger.error("Error while processing the document: {}", e);
-      }
+      //createDocument(entity);
+      this.executor.execute(new MyDocumentCreation(entity, this));
     }
-    commit(false, counter, entity.subject); // Commit what is left
+    commit(false, this.counter, entity.subject); // Commit what is left
   }
-  
 
+  protected void createDocument(Entity entity) {
+  	final SolrInputDocument document = new SolrInputDocument();
+        document.addField(URL, StringUtils.strip(entity.subject, "<>"));
+        document.addField(NTRIPLE, cleanup(entity.getTriples(true)));
+        document.addField(TYPE, Utils.toString(entity.type));
+        document.addField(LABEL, Utils.toString(entity.label));
+        document.addField(DESCRIPTION, Utils.toString(entity.description));
+        try {
+      	  add(document);
+      	  this.counter = commit(true, this.counter, entity.subject);
+        } catch (Exception e) {
+      	  logger.error("Error while processing the document: {}", e);
+        }
+  }
+
+  
+/**
+ * My {@link Runnable} class. Represents a task which need to be executed.
+ */
+private class MyDocumentCreation implements Runnable
+{
+	Entity entity;
+	IndexingMMLab parent;
+	
+    public MyDocumentCreation(Entity entity, IndexingMMLab parent) {
+    	this.entity = entity;
+    	this.parent = parent;
+    }
+ 
+    @Override
+    public void run()
+    { 
+        this.parent.createDocument(this.entity);
+    }
+    
+
+}
+
+/**
+ * My monitor thread. To monitor the status of {@link ThreadPoolExecutor}
+ * and its status.
+ */
+public class MyMonitorThread implements Runnable
+{
+    ThreadPoolExecutor executor;
+ 
+    public MyMonitorThread(ThreadPoolExecutor executor)
+    {
+        this.executor = executor;
+    }
+ 
+    @Override
+    public void run()
+    {
+        try
+        {
+            do
+            {
+                System.out.println(
+                    String.format("[monitor] [%d/%d] Active: %d, Completed: %d, Task: %d, isShutdown: %s, isTerminated: %s",
+                        this.executor.getPoolSize(),
+                        this.executor.getCorePoolSize(),
+                        this.executor.getActiveCount(),
+                        this.executor.getCompletedTaskCount(),
+                        this.executor.getTaskCount(),
+                        this.executor.isShutdown(),
+                        this.executor.isTerminated()));
+                Thread.sleep(3000);
+            }
+            while (true);
+        }
+        catch (Exception e)
+        {
+        }
+    }
+}
 
 /**
  * @param triples
