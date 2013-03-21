@@ -215,7 +215,7 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
     while (hasNext()) { // for each entity
       entity = next();
       //createDocument(entity);
-      this.executor.execute(new MyDocumentCreation(entity, this));
+      this.executor.execute(new MyDocumentCreation(new Entity(entity), this));
     }
     commit(false, this.counter, entity.subject); // Commit what is left
   }

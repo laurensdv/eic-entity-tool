@@ -32,20 +32,30 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Entity {
 
   /* incoming-triples.nt */
-  final ConcurrentHashMap<String, HashSet<String>> inTuples = new ConcurrentHashMap<String, HashSet<String>>();
+  ConcurrentHashMap<String, HashSet<String>> inTuples = new ConcurrentHashMap<String, HashSet<String>>();
   /* outgoing-triples.nt */
-  final ConcurrentHashMap<String, HashSet<String>> outTuples = new ConcurrentHashMap<String, HashSet<String>>();
+  ConcurrentHashMap<String, HashSet<String>> outTuples = new ConcurrentHashMap<String, HashSet<String>>();
   /* metadata */
   final StringBuilder sbMetadata = new StringBuilder();
   /* rdf:type statement's objects */
-  final HashSet<String> type = new HashSet<String>();
-  final HashSet<String> label = new HashSet<String>();
-  final HashSet<String> description = new HashSet<String>();
+  HashSet<String> type = new HashSet<String>();
+  HashSet<String> label = new HashSet<String>();
+  HashSet<String> description = new HashSet<String>();
   
   final StringBuilder sb = new StringBuilder();
   
   String subject = ""; // The URI of the entity
   String context = ""; // The URL of the document where the entity is from
+  
+  public Entity(Entity entity) {
+	  this.inTuples = entity.inTuples;
+	  this.outTuples = entity.outTuples;
+	  this.type = entity.type;
+	  this.label = entity.label;
+	  this.description = entity.description;
+	  this.subject = entity.subject;
+	  this.context = entity.context;
+  }
   
   public synchronized void clear() {
     subject = "";
