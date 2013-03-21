@@ -110,7 +110,7 @@ public class Utils {
    * @param types
    * @param isOut
    */
-  public static void sortAndFlattenNTriples(final StringBuilder triples, final ConcurrentHashMap<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
+  public static synchronized void sortAndFlattenNTriples(final StringBuilder triples, final ConcurrentHashMap<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
     flattenNTriples(triples, map, types, label, description, isOut);
   }
   
@@ -131,7 +131,7 @@ public class Utils {
    *          The list of n-triples.
    * @return The n-tuples concatenated.
    */
-  private static void flattenNTriples(final StringBuilder triples, final Map<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
+  private static synchronized void flattenNTriples(final StringBuilder triples, final Map<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
     try {
       initParser();
       parser.parse(new StringReader(triples.toString()), "");

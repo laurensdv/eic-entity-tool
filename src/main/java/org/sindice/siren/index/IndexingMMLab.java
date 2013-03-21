@@ -220,7 +220,7 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
     commit(false, this.counter, entity.subject); // Commit what is left
   }
 
-  protected void createDocument(Entity entity) {
+  protected synchronized void createDocument(Entity entity) {
   		final SolrInputDocument document = new SolrInputDocument();
         document.addField(URL, StringUtils.strip(entity.subject, "<>"));
         document.addField(NTRIPLE, cleanup(entity.getTriples(true)));
