@@ -18,6 +18,7 @@ package org.sindice.siren.index;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -177,7 +178,7 @@ public class Utils {
    */
   public static synchronized String toString(final HashSet<String> set) {
     sb.setLength(0);
-    for (String s : set) {
+    for (String s : Collections.synchronizedSet(set)) {
       sb.append(s).append(' ');
     }
     sb.append(".\n");

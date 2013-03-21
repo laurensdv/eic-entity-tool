@@ -21,6 +21,7 @@
  */
 package org.sindice.siren.index;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -77,7 +78,7 @@ public class Entity {
     final ConcurrentHashMap<String, HashSet<String>> map = out ? this.outTuples : this.inTuples;
     
     sb.setLength(0);
-    for (Entry<String, HashSet<String>> e : map.entrySet()) {
+    for (Entry<String, HashSet<String>> e : Collections.synchronizedSet(map.entrySet())) {
     	for (String s : e.getValue()){
       sb.append(subject).append(' ').append(e.getKey()).append(' ').append(s).append(" .\n");
     	}
