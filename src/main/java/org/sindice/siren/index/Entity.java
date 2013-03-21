@@ -47,7 +47,7 @@ public class Entity {
   String subject = ""; // The URI of the entity
   String context = ""; // The URL of the document where the entity is from
   
-  public void clear() {
+  public synchronized void clear() {
     subject = "";
     context = "";
     inTuples.clear();
@@ -59,7 +59,7 @@ public class Entity {
     sbMetadata.setLength(0);
   }
   
-  public String getTriples(boolean out) {
+  public synchronized String getTriples(boolean out) {
     final ConcurrentHashMap<String, HashSet<String>> map = out ? this.outTuples : this.inTuples;
     
     sb.setLength(0);
