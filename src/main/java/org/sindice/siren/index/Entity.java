@@ -79,7 +79,7 @@ public class Entity {
     
     sb.setLength(0);
     for (Entry<String, HashSet<String>> e : Collections.synchronizedSet(map.entrySet())) {
-    	for (String s : e.getValue()){
+    	for (String s : Collections.synchronizedSet(e.getValue())){
       sb.append(subject).append(' ').append(e.getKey()).append(' ').append(s).append(" .\n");
     	}
     }
