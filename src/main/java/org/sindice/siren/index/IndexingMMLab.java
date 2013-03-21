@@ -18,7 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.lang.StringUtils;
@@ -28,7 +27,6 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
-import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
@@ -78,14 +76,14 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
    * Threading
    */
   protected int poolSize									= 24;
-  protected int timeOut										= 3;
-  protected BlockingQueue<Runnable> worksQueue = new ArrayBlockingQueue<Runnable>(2*COMMIT);
+  protected int timeOut										= 10;
+  protected BlockingQueue<Runnable> worksQueue = new ArrayBlockingQueue<Runnable>(2);
   protected RejectedExecutionHandler executionHandler = new MyRejectedExecutionHandelerImpl();
    
   // Create the ThreadPoolExecutor
-  protected ThreadPoolExecutor executor = new ThreadPoolExecutor(this.poolSize, this.poolSize, this.timeOut, TimeUnit.MINUTES, worksQueue, executionHandler);
+  protected ThreadPoolExecutor executor = new ThreadPoolExecutor(this.poolSize, this.poolSize, this.timeOut, TimeUnit.SECONDS, worksQueue, executionHandler);
   
-  protected AtomicLong counter = new AtomicLong(0);
+  protected long counter = 0;
   
   protected class MyRejectedExecutionHandelerImpl implements RejectedExecutionHandler
   {
@@ -131,13 +129,10 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
     
     
     this.indexURL = url;
-    //server = new CommonsHttpSolrServer(indexURL);
-    server = new StreamingUpdateSolrServer(indexURL,COMMIT/10,10);
+    server = new CommonsHttpSolrServer(indexURL);
     // Clear the index
     if (CLEAR){
-    	synchronized (this) {
-    		clear();
-    	}
+    	clear();
     }
     
     reader = getTarInputStream(this.input[0]);
@@ -173,7 +168,7 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
    * @param rootDir an entry path
    * @return true if a next tar entry can be read, or if this entry name is a sub-folder of rootDir
    */
-  protected synchronized boolean hasNext(final String rootDir) {
+  protected boolean hasNext(final String rootDir) {
     try {
       /*
        * if reader.available() is not equal to 0, then it means that this entry
@@ -217,25 +212,15 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
     Entity entity = null;
     
     while (hasNext()) { // for each entity
-    	if (this.worksQueue.remainingCapacity() > 0) {
-    		entity = next();
-    		//createDocument(entity);
-      
-    		this.executor.execute(new MyDocumentCreation(entity, this));
-    	}
-    	else {
-    		try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
-				logger.error("could not sleep while waiting for queue spot",e);
-			}
-    	}
+      entity = next();
+      //createDocument(entity);
+      this.executor.execute(new MyDocumentCreation(entity, this));
     }
     commit(false, this.counter, entity.subject); // Commit what is left
   }
 
   protected void createDocument(Entity entity) {
-  		final SolrInputDocument document = new SolrInputDocument();
+  	final SolrInputDocument document = new SolrInputDocument();
         document.addField(URL, StringUtils.strip(entity.subject, "<>"));
         document.addField(NTRIPLE, cleanup(entity.getTriples(true)));
         document.addField(TYPE, Utils.toString(entity.type));
@@ -331,12 +316,11 @@ private Object cleanup(String triples) {
    * @throws CorruptIndexException
    * @throws IOException
    */
-  private synchronized AtomicLong commit(boolean indexing, AtomicLong counter, String subject)
+  private long commit(boolean indexing, long counter, String subject)
   throws SolrServerException, IOException {
-	long cnt = counter.incrementAndGet();
-    if (!indexing || (cnt % COMMIT) == 0) { // Index by batch
-    	server.commit();
-    	logger.info("Commited {} entities. Last entity: {}", (indexing ? COMMIT : counter.get()), subject);
+    if (!indexing || (++counter % COMMIT) == 0) { // Index by batch
+      server.commit();
+      logger.info("Commited {} entities. Last entity: {}", (indexing ? COMMIT : counter), subject);
     }
     return counter;
   }
@@ -349,7 +333,7 @@ private Object cleanup(String triples) {
   /**
    * Add a {@link SolrInputDocument}.
    */
-  public synchronized void add(final SolrInputDocument doc)
+  public void add(final SolrInputDocument doc)
   throws SolrServerException, IOException {
     final UpdateRequest request = new UpdateRequest();
     request.add(doc);
@@ -359,7 +343,7 @@ private Object cleanup(String triples) {
   /**
    * Commit all documents that have been submitted
    */
-  public synchronized void commit()
+  public void commit()
   throws SolrServerException, IOException {
     server.commit();
   }
@@ -367,7 +351,7 @@ private Object cleanup(String triples) {
   /**
    * Delete all the documents
    */
-  public synchronized void clear() throws SolrServerException, IOException {
+  public void clear() throws SolrServerException, IOException {
     server.deleteByQuery("*:*");
     server.commit();
   }
