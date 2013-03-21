@@ -18,6 +18,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.lang.StringUtils;
@@ -83,7 +84,7 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
   // Create the ThreadPoolExecutor
   protected ThreadPoolExecutor executor = new ThreadPoolExecutor(this.poolSize, this.poolSize, this.timeOut, TimeUnit.SECONDS, worksQueue, executionHandler);
   
-  protected long counter = 0;
+  protected AtomicLong counter = new AtomicLong(0);
   
   protected class MyRejectedExecutionHandelerImpl implements RejectedExecutionHandler
   {
@@ -316,11 +317,12 @@ private Object cleanup(String triples) {
    * @throws CorruptIndexException
    * @throws IOException
    */
-  private long commit(boolean indexing, long counter, String subject)
+  private AtomicLong commit(boolean indexing, AtomicLong counter, String subject)
   throws SolrServerException, IOException {
-    if (!indexing || (++counter % COMMIT) == 0) { // Index by batch
+	long cnt = counter.incrementAndGet();
+    if (!indexing || (cnt % COMMIT) == 0) { // Index by batch
       server.commit();
-      logger.info("Commited {} entities. Last entity: {}", (indexing ? COMMIT : counter), subject);
+      logger.info("Commited {} entities. Last entity: {}", (indexing ? COMMIT : counter.get()), subject);
     }
     return counter;
   }
