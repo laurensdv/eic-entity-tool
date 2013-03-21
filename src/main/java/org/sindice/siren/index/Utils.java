@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.lang.StringUtils;
@@ -109,7 +110,7 @@ public class Utils {
    * @param types
    * @param isOut
    */
-  public static void sortAndFlattenNTriples(final StringBuilder triples, final HashMap<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
+  public static void sortAndFlattenNTriples(final StringBuilder triples, final ConcurrentHashMap<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
     flattenNTriples(triples, map, types, label, description, isOut);
   }
   
