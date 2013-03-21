@@ -175,7 +175,7 @@ public class Utils {
    * @param set
    * @return
    */
-  public static String toString(final HashSet<String> set) {
+  public static synchronized String toString(final HashSet<String> set) {
     sb.setLength(0);
     for (String s : set) {
       sb.append(s).append(' ');
