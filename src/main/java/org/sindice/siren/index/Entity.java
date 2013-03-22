@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * An entity of the dataset
@@ -32,35 +33,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Entity {
 
   /* incoming-triples.nt */
-  ConcurrentHashMap<String, HashSet<String>> inTuples = new ConcurrentHashMap<String, HashSet<String>>();
+  final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> inTuples = new ConcurrentHashMap<String, ConcurrentSkipListSet<String>>();
   /* outgoing-triples.nt */
-  ConcurrentHashMap<String, HashSet<String>> outTuples = new ConcurrentHashMap<String, HashSet<String>>();
+  final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> outTuples = new ConcurrentHashMap<String, ConcurrentSkipListSet<String>>();
   /* metadata */
   final StringBuilder sbMetadata = new StringBuilder();
   /* rdf:type statement's objects */
-  HashSet<String> type = new HashSet<String>();
-  HashSet<String> label = new HashSet<String>();
-  HashSet<String> description = new HashSet<String>();
+  final ConcurrentSkipListSet<String> type = new ConcurrentSkipListSet<String>();
+  final ConcurrentSkipListSet<String> label = new ConcurrentSkipListSet<String>();
+  final ConcurrentSkipListSet<String> description = new ConcurrentSkipListSet<String>();
   
   final StringBuilder sb = new StringBuilder();
   
   String subject = ""; // The URI of the entity
   String context = ""; // The URL of the document where the entity is from
-  
-  public Entity() {
-	  // do nothing
-  }
-  
-  public Entity(Entity entity) {
-	  this.inTuples = entity.inTuples;
-	  this.outTuples = entity.outTuples;
-	  this.type = entity.type;
-	  this.label = entity.label;
-	  this.description = entity.description;
-	  this.subject = entity.subject;
-	  this.context = entity.context;
-  }
-  
+
   public synchronized void clear() {
     subject = "";
     context = "";
@@ -74,10 +61,10 @@ public class Entity {
   }
   
   public synchronized String getTriples(boolean out) {
-    final ConcurrentHashMap<String, HashSet<String>> map = out ? this.outTuples : this.inTuples;
+    final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> map = out ? this.outTuples : this.inTuples;
     
     sb.setLength(0);
-    for (Entry<String, HashSet<String>> e : Collections.synchronizedSet(map.entrySet())) {
+    for (Entry<String, ConcurrentSkipListSet<String>> e : Collections.synchronizedSet(map.entrySet())) {
     	for (String s : Collections.synchronizedSet(e.getValue())){
     		sb.append(subject).append(' ').append(e.getKey()).append(' ').append(s).append(" .\n");
     	}
