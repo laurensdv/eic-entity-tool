@@ -77,9 +77,9 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
   /*
    * Threading
    */
-  protected int poolSize									= 256;
-  protected int timeOut										= 1;
-  protected BlockingQueue<Runnable> worksQueue = new ArrayBlockingQueue<Runnable>(COMMIT);
+  protected int poolSize									= 24;
+  protected int timeOut										= 3;
+  protected BlockingQueue<Runnable> worksQueue = new ArrayBlockingQueue<Runnable>(2*COMMIT);
   protected RejectedExecutionHandler executionHandler = new MyRejectedExecutionHandelerImpl();
    
   // Create the ThreadPoolExecutor
@@ -132,10 +132,12 @@ public abstract class IndexingMMLab implements Iterator<Entity> {
     
     this.indexURL = url;
     //server = new CommonsHttpSolrServer(indexURL);
-    server = new StreamingUpdateSolrServer(indexURL,10000,poolSize);
+    server = new StreamingUpdateSolrServer(indexURL,COMMIT/10,10);
     // Clear the index
     if (CLEAR){
-    	clear();
+    	synchronized (this) {
+    		clear();
+    	}
     }
     
     reader = getTarInputStream(this.input[0]);
@@ -329,7 +331,7 @@ private Object cleanup(String triples) {
    * @throws CorruptIndexException
    * @throws IOException
    */
-  private AtomicLong commit(boolean indexing, AtomicLong counter, String subject)
+  private synchronized AtomicLong commit(boolean indexing, AtomicLong counter, String subject)
   throws SolrServerException, IOException {
 	long cnt = counter.incrementAndGet();
     if (!indexing || (cnt % COMMIT) == 0) { // Index by batch
@@ -347,7 +349,7 @@ private Object cleanup(String triples) {
   /**
    * Add a {@link SolrInputDocument}.
    */
-  public void add(final SolrInputDocument doc)
+  public synchronized void add(final SolrInputDocument doc)
   throws SolrServerException, IOException {
     final UpdateRequest request = new UpdateRequest();
     request.add(doc);
