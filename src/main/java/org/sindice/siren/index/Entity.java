@@ -21,9 +21,11 @@
  */
 package org.sindice.siren.index;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * An entity of the dataset
@@ -31,22 +33,22 @@ import java.util.Map.Entry;
 public class Entity {
 
   /* incoming-triples.nt */
-  final HashMap<String, HashSet<String>> inTuples = new HashMap<String, HashSet<String>>();
+  final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> inTuples = new ConcurrentHashMap<String, ConcurrentSkipListSet<String>>();
   /* outgoing-triples.nt */
-  final HashMap<String, HashSet<String>> outTuples = new HashMap<String, HashSet<String>>();
+  final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> outTuples = new ConcurrentHashMap<String, ConcurrentSkipListSet<String>>();
   /* metadata */
   final StringBuilder sbMetadata = new StringBuilder();
   /* rdf:type statement's objects */
-  final HashSet<String> type = new HashSet<String>();
-  final HashSet<String> label = new HashSet<String>();
-  final HashSet<String> description = new HashSet<String>();
+  final ConcurrentSkipListSet<String> type = new ConcurrentSkipListSet<String>();
+  final ConcurrentSkipListSet<String> label = new ConcurrentSkipListSet<String>();
+  final ConcurrentSkipListSet<String> description = new ConcurrentSkipListSet<String>();
   
   final StringBuilder sb = new StringBuilder();
   
   String subject = ""; // The URI of the entity
   String context = ""; // The URL of the document where the entity is from
-  
-  public void clear() {
+
+  public synchronized void clear() {
     subject = "";
     context = "";
     inTuples.clear();
@@ -58,10 +60,11 @@ public class Entity {
     sbMetadata.setLength(0);
   }
   
-  public String getTriples(boolean out) {
-    final HashMap<String, HashSet<String>> map = out ? this.outTuples : this.inTuples;
+  public synchronized String getTriples(boolean out) {
+    final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> map = out ? this.outTuples : this.inTuples;
     
     sb.setLength(0);
+<<<<<<< HEAD
     for (Entry<String, HashSet<String>> e : map.entrySet()) {
     	for (String s : e.getValue()){
 		if ( (subject.contains("<") && subject.contains(">")) || subject.indexOf('_') == 0)
@@ -69,6 +72,12 @@ public class Entity {
 		else
 			sb.append('<').append(subject).append('>').append(' ').append(e.getKey()).append(' ').append(s).append(" .\n");
 	}
+=======
+    for (Entry<String, ConcurrentSkipListSet<String>> e : Collections.synchronizedSet(map.entrySet())) {
+    	for (String s : Collections.synchronizedSet(e.getValue())){
+    		sb.append(subject).append(' ').append(e.getKey()).append(' ').append(s).append(" .\n");
+    	}
+>>>>>>> 10346c8e24331b43d4b615cfb9d0914d2a072a2e
     }
     return sb.toString();
   }

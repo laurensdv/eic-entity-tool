@@ -18,9 +18,12 @@ package org.sindice.siren.index;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.lang.StringUtils;
@@ -109,7 +112,7 @@ public class Utils {
    * @param types
    * @param isOut
    */
-  public static void sortAndFlattenNTriples(final StringBuilder triples, final HashMap<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
+  public static synchronized void sortAndFlattenNTriples(final StringBuilder triples, final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> map, final ConcurrentSkipListSet<String> types, final ConcurrentSkipListSet<String> label, final ConcurrentSkipListSet<String> description, final boolean isOut) {
     flattenNTriples(triples, map, types, label, description, isOut);
   }
   
@@ -130,7 +133,7 @@ public class Utils {
    *          The list of n-triples.
    * @return The n-tuples concatenated.
    */
-  private static void flattenNTriples(final StringBuilder triples, final Map<String, HashSet<String>> map, final HashSet<String> types, final HashSet<String> label, final HashSet<String> description, final boolean isOut) {
+  private static synchronized void flattenNTriples(final StringBuilder triples, final ConcurrentHashMap<String, ConcurrentSkipListSet<String>> map, final ConcurrentSkipListSet<String> types, final ConcurrentSkipListSet<String> label, final ConcurrentSkipListSet<String> description, final boolean isOut) {
     try {
       initParser();
       parser.parse(new StringReader(triples.toString()), "");
@@ -151,10 +154,10 @@ public class Utils {
     if (types != null && predicate.equals(RDF_TYPE)) {
           types.add(object);
         } else {
-          HashSet<String> hs = map.get(predicate);
+          ConcurrentSkipListSet<String> hs = map.get(predicate);
           final String toAdd = isOut ? object : subject;
           if (hs == null) {
-            hs = new HashSet<String>();
+            hs = new ConcurrentSkipListSet<String>();
             map.put(predicate, hs);
           }
           if (hs.size() < 65535) // 2 ^ 16 - 1
@@ -174,9 +177,9 @@ public class Utils {
    * @param set
    * @return
    */
-  public static String toString(final HashSet<String> set) {
+  public static synchronized String toString(final ConcurrentSkipListSet<String> set) {
     sb.setLength(0);
-    for (String s : set) {
+    for (String s : Collections.synchronizedSet(set)) {
       sb.append(s).append(' ');
     }
     sb.append(".\n");
